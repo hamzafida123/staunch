@@ -78,7 +78,7 @@
       </div>
       <%= form_tag("/blogs/import", :method => "post", :multipart => true) do %>
       <div class="modal-body">
-          <%= file_field_tag 'attachment' %>
+          <%= file_field_tag 'attachment', accept: "text/csv" %>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
