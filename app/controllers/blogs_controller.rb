@@ -62,16 +62,20 @@ class BlogsController < ApplicationController
   end
 
   def import
-    file = params[:attachment]
-    data = CSV.parse(file.to_io, headers: true, encoding: 'utf8')
-    # Start code to handle CSV data
-    ActiveRecord::Base.transaction do
-      data.each do |row|
-        current_user.blogs.create!(row.to_h)
-      end
+    if params[:attachment].present? && params[:attachment].content_type == "text/csv"
+      file = params[:attachment]
+
+      # Save the file to a persistent location
+      file_path = Rails.root.join("tmp", "uploads", file.original_filename)
+      File.open(file_path, "wb") { |f| f.write(file.read) }
+
+      # Run the job with the persistent file path
+      BlogImportJob.perform_later(file_path.to_s, current_user.id)
+
+      redirect_to blogs_path, notice: "Blog import has started. Refresh this page in a few minutes to see an update."
+    else
+      redirect_to blogs_path, alert: "Please upload a valid CSV file."
     end
-    # End code to handle CSV data
-    redirect_to blogs_path
   end
 
   private
