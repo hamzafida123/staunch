@@ -1,5 +1,7 @@
 class MemoryLeakJob < ApplicationJob
   queue_as :default
+  BATCH_SIZE = 100
+  # THROTTLE_LIMIT = 10
 
   # The purpose of this job to take each blog record and send it to an api and save that api response. 
 
@@ -9,24 +11,20 @@ class MemoryLeakJob < ApplicationJob
     blogs.each do |blog|
       validate_and_process(blog)
     end
+
+    Blog.find_each(batch_size: BATCH_SIZE) do |blog|
+      process_blog(blog)
+      # sleep(1.0 / THROTTLE_LIMIT) # Throttle API calls If the API enforces a limit on the number of requests per second/minute
+    end
   end
 
   private
 
   def validate_and_process(blog)
-    # Perform some validations
-    if blog_valid?(blog)
-      # Make an API request
-      blog_to_api(blog)
-    else
-      Rails.logger.info "Invalid blog: #{blog.id}"
-    end
+    return Rails.logger.info("Invalid blog: #{blog.id}") unless blog_valid?(blog)
 
-    # Memory leak: storing blog in an array, which grows indefinitely
-    @processed_blogs ||= []
-    @processed_blogs << blog
-
-    # This prevents the blog object from being garbage collected
+    # Make an API request
+    blog_to_api(blog)
   end
 
   def blog_valid?(blog)
